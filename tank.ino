@@ -26,7 +26,7 @@ int i = 0;
 void setup() { 
   myservo.attach(3);// attach servo on pin 3 to servo object
   Serial.begin(9600);
-  Serial.setTimeout(10);   
+  Serial.setTimeout(5);   
   pinMode(Echo, INPUT);    
   pinMode(Trig, OUTPUT);  
   pinMode(IN1,OUTPUT);
@@ -48,8 +48,12 @@ void loop() {
   receiveInfo();
   
   apply();
+
   
-  sendInfo();
+  if (i % 4 == 0) {
+    middleDistance = distanceTest();
+    sendInfo();
+  }
 
   i++;
 }
@@ -98,10 +102,6 @@ void applyCommand(char* cName, char* cVal) {
 
 void apply() {
     myservo.write(servoAngle);
-
-    if (i % 4 == 0) {
-      middleDistance = distanceTest();
-    }
     
     moveCar();
 
@@ -109,23 +109,24 @@ void apply() {
 }
 
 void buzz() {
-  if (buzzTimeout == 0 || buzzTimeout < millis()) {
-    int buzzDelay = middleDistance < 100 ? max(middleDistance*middleDistance/3, 20) : 0;
-    buzzTimeout = millis() + buzzDelay;
+  int m = millis();
+  if (buzzTimeout == 0 || buzzTimeout < m) {
+    int buzzDelay = middleDistance < 150 ? max(middleDistance*middleDistance/4, 50)  : 0; //
+    buzzTimeout = m + buzzDelay;
     if (buzzDelay != 0) {
-      tone(BUZZER, 1400, 3);
+      tone(BUZZER, 2000, 3);
     }
     return;
   }
 }
 
 void sendInfo() {
-//    Serial.print("ud=");
-//    Serial.print(middleDistance);
-//    Serial.print(",");
-//    Serial.print("sa=");
-//    Serial.print(servoAngle);
-//    Serial.print(",");
+    Serial.print("ud=");
+    Serial.print(middleDistance);
+    Serial.print(",");
+    Serial.print("sa=");
+    Serial.print(servoAngle);
+    Serial.print(",");
     Serial.print("abs_l=");
     Serial.print(ABS_L);
     Serial.print(",");

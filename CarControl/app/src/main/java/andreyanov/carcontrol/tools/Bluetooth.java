@@ -38,7 +38,7 @@ public class Bluetooth implements Runnable {
     public Bluetooth(Activity activity) {
         owner = activity;
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        Log.d("BT", "BT instance created");
+        Log.i("BT", "BT instance created");
     }
 
     public void addListener(BluetoothDataListener b) {
@@ -54,7 +54,7 @@ public class Bluetooth implements Runnable {
     }
 
     public void tryToEnableBluetooth() {
-        Log.d("BT", "tryToEnableBluetooth");
+        Log.i("BT", "tryToEnableBluetooth");
         if(!mBluetoothAdapter.isEnabled()) {
             Intent enableBluetooth = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             owner.startActivityForResult(enableBluetooth, 0);
@@ -62,9 +62,9 @@ public class Bluetooth implements Runnable {
     }
 
     private void findBT() {
-        Log.d("BT", "try to find BT device");
+        Log.i("BT", "try to find BT device");
         if (!isBluetoothExists()) {
-            Log.d("BT", "No BT adapter find. Exit");
+            Log.i("BT", "No BT adapter find. Exit");
             return;
         }
 
@@ -82,14 +82,14 @@ public class Bluetooth implements Runnable {
             }
         }
         if (mmDevice != null)
-            Log.d("BT", "Bluetooth Device Found");
+            Log.i("BT", "Bluetooth Device Found");
 
         else
-            Log.d("BT", "No Bluetooth Device Found");
+            Log.i("BT", "No Bluetooth Device Found");
     }
 
     private void openBT() {
-        Log.d("BT", "try to openBT");
+        Log.i("BT", "try to openBT");
         if (mmDevice == null) return;
 
         UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"); //Standard SerialPortService ID
@@ -100,19 +100,23 @@ public class Bluetooth implements Runnable {
             mmInputStream = mmSocket.getInputStream();
         }
         catch (Exception e) {
-            Log.d("BT", "failed to open BT socket");
+            Log.i("BT", "failed to open BT socket");
             mmSocket = null;
             e.printStackTrace();
             return;
         }
+        for (BluetoothDataListener listener : listeners) {
+            listener.connected();
+        }
+        Log.i("BT", "Bluetooth Opened ");
+}
 
-        Log.d("BT", "Bluetooth Opened " + mmSocket.isConnected());
-    }
-
-    private void closeBT() {
-        if (mmSocket != null && mmSocket.isConnected()) {
+    public void closeBT() {
+        if (mmSocket != null) {
             try {
                 mmSocket.close();
+                mmOutputStream.close();
+                mmInputStream.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -120,10 +124,9 @@ public class Bluetooth implements Runnable {
                 workerThread.interrupt();
                 workerThread = null;
             }
-            Log.d("BT", "Bluetooth Closed");
+            Log.i("BT", "Bluetooth Closed");
         }
         mmDevice = null;
-
     }
 
     @Override
@@ -168,23 +171,24 @@ public class Bluetooth implements Runnable {
     }
 
     public void init() {
-            closeBT();
-            findBT();
-            openBT();
+        closeBT();
+        findBT();
+        openBT();
 
+        if (mmSocket != null && mmSocket.isConnected()) {
             if (workerThread == null) {
-                workerThread = new Thread(this,"Bluetooth Listener");
+                workerThread = new Thread(this, "Bluetooth Listener");
             }
             if (workerThread.isInterrupted()) {
                 workerThread.start();
-                Log.d("BT", "thread start");
+                Log.i("BT", "thread start");
             }
-
+        }
     }
 
     public void sendData(String data) {
         if (!data.endsWith("/n")) data += "/n";
-        if (mmOutputStream == null || !mmSocket.isConnected()) return;
+        if (mmOutputStream == null) return;
 
         try {
             Log.d("BT", "SendData: " + data);
@@ -196,6 +200,8 @@ public class Bluetooth implements Runnable {
 
     public static interface BluetoothDataListener {
         public void dataReady(String data);
+
+        public void connected();
     }
 
 }

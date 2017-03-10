@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
@@ -55,20 +56,27 @@ public class MainActivity extends Activity implements Bluetooth.BluetoothDataLis
         //Open Button
         openButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                v.post(new Runnable() { public void run(){
+            AsyncTask.execute(new Runnable() {
+                @Override
+                public void run() {
                     Log.d("MY", "start init BT");
                     b.init();
-                    control.postDelayed(new ControlSendRunner(), 1000L);
-                }});
+                }
+            });
             }
         });
     }
 
     @Override
+    public void onStop() {
+        super.onStop();
+        b.closeBT();
+    }
+    @Override
     public void dataReady(String data) {
         String[] pairs = data.split(",");
 
-        Log.d("MY", data);
+        Log.d("BT", "ReceiveData: " + data);
         for (String s : pairs) {
             String[] comm = s.split("=");
             try {
@@ -78,7 +86,12 @@ public class MainActivity extends Activity implements Bluetooth.BluetoothDataLis
                 }
             } catch(Exception e) {}
         }
+    }
 
+    @Override
+    public void connected() {
+        Log.i("MY", "BT connected, start send");
+        control.postDelayed(new ControlSendRunner(), 1000L);
     }
 
     void setEngineData() {
@@ -87,7 +100,7 @@ public class MainActivity extends Activity implements Bluetooth.BluetoothDataLis
 
         int direction = control.getDirection();
         int power = control.getPower();
-//        Log.d("MY", "direction = " + direction + "; power = " + power + ";  angle = " + control.getAngle());
+        Log.d("Control", "direction = " + direction + "; power = " + power + ";  angle = " + control.getAngle());
 
         switch (direction) {
             case JoystickView.FRONT: {
@@ -97,22 +110,22 @@ public class MainActivity extends Activity implements Bluetooth.BluetoothDataLis
             }
             case JoystickView.LEFT_FRONT: {
                 l = 1f;
-                r = 0.5f;
+                r = 0.75f;
                 break;
             }
             case JoystickView.LEFT: {
                 l = 1;
-                r = 0;
+                r = -1;
                 break;
             }
             case JoystickView.RIGHT: {
-                l = 0;
+                l = -1;
                 r = 1;
                 break;
             }
             case JoystickView.FRONT_RIGHT: {
                 r = 1f;
-                l = 0.5f;
+                l = 0.75f;
                 break;
             }
             case JoystickView.BOTTOM: {
@@ -122,12 +135,12 @@ public class MainActivity extends Activity implements Bluetooth.BluetoothDataLis
             }
             case JoystickView.BOTTOM_LEFT: {
                 l = -1;
-                r = -0.5f;
+                r = -0.75f;
                 break;
             }
             case JoystickView.RIGHT_BOTTOM: {
                 r = -1f;
-                l = -0.5f;
+                l = -0.75f;
                 break;
             }
             default: {
@@ -154,7 +167,7 @@ public class MainActivity extends Activity implements Bluetooth.BluetoothDataLis
             int sa = head.getProgress();
             b.sendData("abs_l="+abs_l+",abs_r="+abs_r+",sa="+sa);
 
-            control.postDelayed(this , 30L);
+            control.postDelayed(this , 20L);
         }
     }
 }
